@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "inquirer": "^12.6.3",
+    "install": "^0.13.0",
+    "npm": "^11.4.1",
+    "readline-sync": "^1.4.10"
+  }
+}
