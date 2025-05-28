@@ -1,7 +1,6 @@
 const readlineSync = require('readline-sync');
 const faixas = require('./estados.json');
 let opcao = -1;
-let veiculosEstacionados = [];
 
 const vagas = [
   [null, null, null],
@@ -48,6 +47,30 @@ function identificarEstado(placa) {
   return "Estado desconhecido";
 }
 
+function encontrarVagaLivre() {
+  for (let i = 0; i < vagas.length; i++) {
+    for (let j = 0; j < vagas[i].length; j++) {
+      if (vagas[i][j] === null) {
+        return { i, j };
+      }
+    }
+  }
+  return null;
+}
+
+function encontrarVagaPorPlaca(placa) {
+  for (let i = 0; i < vagas.length; i++) {
+    for (let j = 0; j < vagas[i].length; j++) {
+      const carro = vagas[i][j];
+      if (carro && carro.strPlaca === placa) {
+        return { i, j, carro };
+      }
+    }
+  }
+  return null;
+}
+
+
 class Carro {
   constructor(strPlaca, tempoEntrada) {
     this.strPlaca = strPlaca;
@@ -62,7 +85,7 @@ while (opcao != 0) {
   console.log("3. Visualizar Ocupação");
   console.log("4. Verificar Estado da placa")
   console.log("0. Encerrar Programa");
-  console.log(`--------------------------   ----\n`)
+  console.log(`------------------------------\n`)
 
   const input = readlineSync.question('Escolha uma opcao: ');
   opcao = parseInt(input);
@@ -76,58 +99,73 @@ while (opcao != 0) {
       const tempoEntrada = (hNumberEntrada * 60) + minNumberEntrada;
 
       const carroNovo = new Carro(placa, tempoEntrada);
-      veiculosEstacionados.push(carroNovo);
-      console.log(veiculosEstacionados);
 
-      console.log(`\n Veiculo registrado com sucesso com a placa ${placa}`);
+      const vaga = encontrarVagaLivre();
+
+      if (!vaga) {
+        console.log("Estacionamento lotado!");
+        break;
+      }
+
+      vagas[vaga.i][vaga.j] = carroNovo;
+
+      console.log(`\nVeiculo registrado com sucesso! Placa: ${placa} na vaga [${vaga.i}][${vaga.j}]`);
       break;
     }
 
 
     case 2: {
-      const placaSaida = readlineSync.question('\nDigite uma placa para registrar a saida: ').toUpperCase();
-      const index = veiculosEstacionados.findIndex(carro => carro.strPlaca === placaSaida);
-      const inputSaida = readlineSync.question('Digite a hora de saida: ');
-      const [hNumberSaida, minNumberSaida] = inputSaida.split(":").map(Number);
-      const tempoSaida = (hNumberSaida * 60) + minNumberSaida;
+      const placaSaida = readlineSync.question('\nDigite a placa para registrar a saida: ').toUpperCase();
+      const inputSaida = readlineSync.question('Digite a hora de saida (hh:mm): ');
+      const [hSaida, mSaida] = inputSaida.split(":").map(Number);
+      const tempoSaida = (hSaida * 60) + mSaida;
 
+      const resultado = encontrarVagaPorPlaca(placaSaida);
 
-      if (index !== -1) {
-        const carro = veiculosEstacionados[index];
-        const preco = calcularPreco(carro.tempoEntrada, tempoSaida)
+      if (resultado) {
+        const { i, j, carro } = resultado;
+        const preco = calcularPreco(carro.tempoEntrada, tempoSaida);
+        vagas[i][j] = null;
 
-        veiculosEstacionados.splice(index, 1);
-        console.log(`\nVeículo com placa ${placaSaida} removido.`);
-        console.log("\n--- TICKET DE ESTACIONAMENTO ---");
+        console.log(`\n--- TICKET DE ESTACIONAMENTO ---`);
         console.log(`Placa do Veículo: ${placaSaida}`);
+        console.log(`Vaga: [${i}][${j}]`);
         console.log(`Hora de entrada: ${tempoParaHoras(carro.tempoEntrada)}`);
-        console.log(`Hora de saida: ${tempoParaHoras(tempoSaida)}`);
-        console.log(`Valor a Pagar: R$${preco},00`);
+        console.log(`Hora de saída: ${tempoParaHoras(tempoSaida)}`);
+        console.log(`Valor a pagar: R$${preco},00`);
         console.log(`--------------------------------\n`);
-
       } else {
         console.log("Veículo não encontrado.");
       }
 
       break;
-    }
+  }
+
 
 
     case 3: {
-      console.log("");
-      console.log(veiculosEstacionados);
+      console.log("\n--- Ocupação do Estacionamento ---");
+
+      for (let i = 0; i < vagas.length; i++) {
+        let linha = "";
+        for (let j = 0; j < vagas[i].length; j++) {
+          linha += vagas[i][j] ? `[${vagas[i][j].strPlaca}]` : `[ LIVRE ]`;
+          }
+        console.log(linha);
+      } 
+      console.log("\n--------------------------------");
       break;
     }
 
     case 4: {
       const placa = readlineSync.question("\nInsira uma placa para verificar o estado: ").toUpperCase();
-      console.log(`\nA placa é do estado : ${identificarEstado(placa)}`);
+      console.log(`\nA placa é do estado : ${identificarEstado(placa)}\n`);
       break;
     }
 
 
     case 0: {
-      console.log('\nEncerrado o programa...');
+      console.log('\nEncerrado o programa...\n');
       break;
     }
   }
